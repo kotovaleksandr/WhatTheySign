@@ -1,7 +1,8 @@
-__author__ = 'kotov'
+__author__ = 'kotov.a'
 
 import http.client
 import re
+import logging
 
 from html.parser import HTMLParser
 
@@ -38,57 +39,53 @@ class LyricsPageParser(HTMLParser):
             self.lyrics += bytes(data, 'utf8').decode("unicode_escape").strip().lower() + ' '
 
 
-def getArtistPage(artistName):
-    artistUrl = '{2}/{0}/{1}/'.format(artistName[0], artistName.replace(' ', '+'), mainUrl)
-    print(artistUrl)
+def get_artist_page(artist_name):
+    artist_url = '{2}/{0}/{1}/'.format(artist_name[0], artist_name.replace(' ', '+'), mainUrl)
 
     conn.set_debuglevel(0)
     # http://www.lyricsfreak.com/m/metallica/
-    conn.request('GET', artistUrl, headers=headers)
+    conn.request('GET', artist_url, headers=headers)
     r = conn.getresponse()
     if r.status == 200:
-        artistPage = r.read()
-        print(artistPage)
+        artist_page = r.read()
         conn.close()
-        return str(artistPage)
-    print('error from server:', r.reason)
+        return str(artist_page)
+    logging.error('error from server: %s', r.reason)
 
 
-def getSongsLinksFromPage(page, artistName):
-    artistPrefixRe = '/{0}/{1}'.format(artistName[0], artistName.replace(' ', '\+'))
-    artistPrefix = '/{0}/{1}'.format(artistName[0], artistName.replace(' ', '+'))
+def get_songs_links_from_page(page, artist_name):
+    artist_prefix_re = '/{0}/{1}'.format(artist_name[0], artist_name.replace(' ', '\+'))
+    artist_prefix = '/{0}/{1}'.format(artist_name[0], artist_name.replace(' ', '+'))
     result = []
-    match = re.findall('href=\"' + artistPrefixRe + '(.+?)\"', page, re.MULTILINE)
+    match = re.findall('href=\"' + artist_prefix_re + '(.+?)\"', page, re.MULTILINE)
     for g in match:
-        url = artistPrefix + g
-        print(url)
+        url = artist_prefix + g
         result.append(url)
     return result
 
 
-def getLyricsFromPage(songName):
-    songUrl = '{0}/{1}'.format(mainUrl, songName)
-    # print('current song: ', songUrl)
+def get_lyrics_from_page(song_name):
+    song_url = '{0}{1}'.format(mainUrl, song_name)
+    # print('current song: ', song_url)
     # conn = http.client.HTTPConnection(mainUrl, 80)
-    conn.request('GET', songUrl)
+    conn.request('GET', song_url)
     try:
         r = conn.getresponse()
         if r.status == 200:
             text = r.read()
-            myHtmlParser = LyricsPageParser()
-            myHtmlParser.feed(str(text))
-            # print(myHtmlParser.lyrics)
-            return myHtmlParser.lyrics
+            html_parser = LyricsPageParser()
+            html_parser.feed(str(text))
+            # print(html_parser.lyrics)
+            return html_parser.lyrics
         else:
+            logging.error('error on song %s, http code: %s', song_url, r.reason)
             return ''
     except Exception as e:
-        print(e)
-    finally:
-        conn.close()
+        logging.exception(e)
 
 
-# page = getArtistPage(artistName)
-# links = getSongsLinksFromPage(page, artistName)
+# page = get_artist_page(artistName)
+# links = get_songs_links_from_page(page, artistName)
 # for link in links:
-# getLyricsFromPage(link)
+# get_lyrics_from_page(link)
 # break
